@@ -1,0 +1,19 @@
+
+[Unit]
+Description=Advanced Binance Trading Bot
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/trading-bot
+Environment=PATH=/usr/bin
+EnvironmentFile=/opt/trading-bot/production.env
+ExecStart=/usr/bin/python3.11 -m gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 main:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
