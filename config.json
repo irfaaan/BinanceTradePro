@@ -1,0 +1,45 @@
+{
+  "trading_pairs": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "ADAUSDT",
+    "SOLUSDT"
+  ],
+  "risk_management": {
+    "max_position_size": 0.05,
+    "stop_loss_percent": 0.01,
+    "take_profit_percent": 0.02,
+    "max_daily_loss": 0.1,
+    "max_open_trades": 5
+  },
+  "trading_strategy": {
+    "min_confidence": 0.9,
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "sma_periods": [10, 20, 50],
+    "ema_periods": [12, 26],
+    "macd_params": [12, 26, 9],
+    "bollinger_period": 20,
+    "bollinger_std": 2
+  },
+  "data_settings": {
+    "intervals": ["1m", "5m", "15m"],
+    "history_days": 60,
+    "cache_duration": 300
+  },
+  "paper_trading": {
+    "initial_balance": 10000.0,
+    "base_currency": "USDT"
+  },
+  "ml_settings": {
+    "model_type": "RandomForest",
+    "retrain_interval": 24,
+    "feature_window": 60,
+    "prediction_horizon": 30
+  },
+  "api_settings": {
+    "use_testnet": true,
+    "rate_limit_buffer": 0.8
+  }
+}

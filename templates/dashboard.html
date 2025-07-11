@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Binance Trading Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Portfolio Summary -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-wallet me-2"></i>
+                    Portfolio Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if portfolio_summary %}
+                    <div class="row">
+                        <div class="col-6">
+                            <h6 class="text-muted">Total Value</h6>
+                            <h4 class="text-primary">{{ "%.2f"|format(portfolio_summary.total_value) }} USDT</h4>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-muted">P&L</h6>
+                            <h4 class="{% if portfolio_summary.pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(portfolio_summary.pnl) }} USDT
+                                <small>({{ "%.2f"|format(portfolio_summary.pnl_percent) }}%)</small>
+                            </h4>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="text-muted mb-3">Assets</h6>
+                    {% for asset, data in portfolio_summary.assets.items() %}
+                        {% if data.balance > 0 %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>{{ asset }}</span>
+                                <span class="text-end">
+                                    {{ "%.6f"|format(data.balance) }}<br>
+                                    <small class="text-muted">Avg: {{ "%.4f"|format(data.avg_price) }}</small>
+                                </span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No portfolio data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Pairs -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    Trading Pairs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="tradingPairs">
+                    {% for pair in trading_pairs %}
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card bg-dark">
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ pair }}</h6>
+                                    <div class="price-info" data-symbol="{{ pair }}">
+                                        <div class="price">
+                                            <span class="current-price">Loading...</span>
+                                        </div>
+                                        <div class="change">
+                                            <small class="price-change">-</small>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="viewChart('{{ pair }}')">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success me-1" onclick="quickTrade('{{ pair }}', 'BUY')">
+                                            <i class="fas fa-arrow-up"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="quickTrade('{{ pair }}', 'SELL')">
+                                            <i class="fas fa-arrow-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Performance Metrics -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if performance_metrics %}
+                    <div class="row text-center">
+                        <div class="col-6 col-md-3">
+                            <h6 class="text-muted">Total Trades</h6>
+                            <h5>{{ performance_metrics.total_trades }}</h5>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="text-muted">Win Rate</h6>
+                            <h5 class="{% if performance_metrics.win_rate >= 60 %}text-success{% elif performance_metrics.win_rate >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ "%.1f"|format(performance_metrics.win_rate) }}%
+                            </h5>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="text-muted">Wins</h6>
+                            <h5 class="text-success">{{ performance_metrics.wins }}</h5>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <h6 class="text-muted">Losses</h6>
+                            <h5 class="text-danger">{{ performance_metrics.losses }}</h5>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No performance data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Trades -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Recent Trades
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_trades %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Price</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trade in recent_trades[:5] %}
+                                    <tr>
+                                        <td>{{ trade.symbol }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if trade.side == 'BUY' %}success{% else %}danger{% endif %}">
+                                                {{ trade.side }}
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.4f"|format(trade.price) }}</td>
+                                        <td>
+                                            <small>{{ trade.timestamp.strftime('%H:%M') }}</small>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <a href="{{ url_for('dashboard.portfolio') }}" class="btn btn-sm btn-outline-primary">
+                            View All Trades
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent trades</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Modal -->
+<div class="modal fade" id="chartModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chart - <span id="chartSymbol"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <canvas id="priceChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-lg-4">
+                        <div id="tradingSignals" class="mt-3">
+                            <!-- Trading signals will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trade Modal -->
+<div class="modal fade" id="tradeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manual Trade - <span id="tradeSymbol"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="tradeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Side</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="side" id="buyOption" value="BUY">
+                            <label class="btn btn-outline-success" for="buyOption">Buy</label>
+                            <input type="radio" class="btn-check" name="side" id="sellOption" value="SELL">
+                            <label class="btn btn-outline-danger" for="sellOption">Sell</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" step="0.000001" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="price" class="form-label">Price</label>
+                        <input type="number" class="form-control" id="price" step="0.0001" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-text">
+                            <strong>Current Price:</strong> <span id="currentPrice">-</span><br>
+                            <strong>Total Value:</strong> <span id="totalValue">-</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeTrade()">Execute Trade</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePrices();
+        setInterval(updatePrices, 30000); // Update every 30 seconds
+    });
+
+    // Update prices for all trading pairs
+    function updatePrices() {
+        const pairs = {{ trading_pairs | tojson }};
+        
+        pairs.forEach(pair => {
+            fetch(`/api/market-data/${pair}`)
+                .then(response => response.json())
+                .then(data => {
+                    const priceInfo = document.querySelector(`[data-symbol="${pair}"]`);
+                    if (priceInfo && data.price) {
+                        priceInfo.querySelector('.current-price').textContent = parseFloat(data.price).toFixed(4);
+                        const changeElement = priceInfo.querySelector('.price-change');
+                        changeElement.textContent = `${data.change_24h > 0 ? '+' : ''}${data.change_24h.toFixed(2)}%`;
+                        changeElement.className = `price-change ${data.change_24h >= 0 ? 'text-success' : 'text-danger'}`;
+                    }
+                })
+                .catch(error => console.error('Error updating price for', pair, error));
+        });
+    }
+
+    // View chart for a symbol
+    function viewChart(symbol) {
+        document.getElementById('chartSymbol').textContent = symbol;
+        loadChart(symbol);
+        new bootstrap.Modal(document.getElementById('chartModal')).show();
+    }
+
+    // Quick trade setup
+    function quickTrade(symbol, side) {
+        document.getElementById('tradeSymbol').textContent = symbol;
+        document.getElementById(side.toLowerCase() + 'Option').checked = true;
+        
+        // Get current price
+        fetch(`/api/market-data/${symbol}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('currentPrice').textContent = parseFloat(data.price).toFixed(4);
+                document.getElementById('price').value = parseFloat(data.price).toFixed(4);
+            });
+        
+        new bootstrap.Modal(document.getElementById('tradeModal')).show();
+    }
+
+    // Execute manual trade
+    function executeTrade() {
+        const symbol = document.getElementById('tradeSymbol').textContent;
+        const side = document.querySelector('input[name="side"]:checked').value;
+        const quantity = parseFloat(document.getElementById('quantity').value);
+        const price = parseFloat(document.getElementById('price').value);
+        
+        if (!quantity || !price) {
+            alert('Please enter valid quantity and price');
+            return;
+        }
+        
+        const tradeData = {
+            symbol: symbol,
+            side: side,
+            quantity: quantity,
+            price: price
+        };
+        
+        fetch('/manual-trade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(tradeData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Trade executed successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('tradeModal')).hide();
+                location.reload();
+            } else {
+                alert('Trade failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error executing trade:', error);
+            alert('Error executing trade');
+        });
+    }
+
+    // Update total value when quantity or price changes
+    document.getElementById('quantity').addEventListener('input', updateTotalValue);
+    document.getElementById('price').addEventListener('input', updateTotalValue);
+
+    function updateTotalValue() {
+        const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+        const price = parseFloat(document.getElementById('price').value) || 0;
+        const total = quantity * price;
+        document.getElementById('totalValue').textContent = total.toFixed(4) + ' USDT';
+    }
+</script>
+{% endblock %}

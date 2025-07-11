@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio - Binance Trading Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Portfolio Overview -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-wallet me-2"></i>
+                    Portfolio Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if portfolio_summary %}
+                    <div class="text-center mb-3">
+                        <h3 class="text-primary">{{ "%.2f"|format(portfolio_summary.total_value) }} USDT</h3>
+                        <p class="text-muted">Total Portfolio Value</p>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h6 class="text-muted">P&L</h6>
+                            <h5 class="{% if portfolio_summary.pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(portfolio_summary.pnl) }} USDT
+                            </h5>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-muted">P&L %</h6>
+                            <h5 class="{% if portfolio_summary.pnl_percent >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(portfolio_summary.pnl_percent) }}%
+                            </h5>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="text-muted mb-3">Asset Allocation</h6>
+                    {% for asset, data in portfolio_summary.assets.items() %}
+                        {% if data.balance > 0 %}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>{{ asset }}</span>
+                                    <span>{{ "%.6f"|format(data.balance) }}</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ (data.balance / portfolio_summary.total_value * 100) if portfolio_summary.total_value > 0 else 0 }}%"></div>
+                                </div>
+                                <small class="text-muted">Avg Price: {{ "%.4f"|format(data.avg_price) }}</small>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No portfolio data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if performance_metrics %}
+                    <div class="row">
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ performance_metrics.total_trades }}</h4>
+                                    <p class="mb-0">Total Trades</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ performance_metrics.wins }}</h4>
+                                    <p class="mb-0">Winning Trades</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ performance_metrics.losses }}</h4>
+                                    <p class="mb-0">Losing Trades</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ "%.1f"|format(performance_metrics.win_rate) }}%</h4>
+                                    <p class="mb-0">Win Rate</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Volume</h6>
+                                    <h4 class="text-primary">{{ "%.2f"|format(performance_metrics.total_volume) }} USDT</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total P&L</h6>
+                                    <h4 class="{% if performance_metrics.total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {{ "%.2f"|format(performance_metrics.total_pnl) }} USDT
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No performance data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trade History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Trade History
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if trade_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total Value</th>
+                                    <th>Strategy</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trade in trade_history %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ trade.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </td>
+                                        <td>{{ trade.symbol }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if trade.side == 'BUY' %}success{% else %}danger{% endif %}">
+                                                {{ trade.side }}
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.6f"|format(trade.quantity) }}</td>
+                                        <td>{{ "%.4f"|format(trade.price) }}</td>
+                                        <td>{{ "%.2f"|format(trade.total_value) }} USDT</td>
+                                        <td>
+                                            <small class="text-muted">{{ trade.strategy_signal or 'N/A' }}</small>
+                                        </td>
+                                        <td>
+                                            {% if trade.prediction_confidence %}
+                                                <span class="badge bg-{% if trade.prediction_confidence > 0.8 %}success{% elif trade.prediction_confidence > 0.6 %}warning{% else %}secondary{% endif %}">
+                                                    {{ "%.1f"|format(trade.prediction_confidence * 100) }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No trade history available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Status -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-robot me-2"></i>
+                    Strategy Status
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if strategy_status %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Open Positions</h6>
+                            <p class="h5">{{ strategy_status.total_open_positions }} / {{ strategy_status.max_open_trades }}</p>
+                            
+                            {% if strategy_status.open_positions %}
+                                <div class="mt-3">
+                                    <h6 class="text-muted">Current Positions</h6>
+                                    {% for symbol, position in strategy_status.open_positions.items() %}
+                                        <div class="card mb-2">
+                                            <div class="card-body py-2">
+                                                <div class="row align-items-center">
+                                                    <div class="col-3">
+                                                        <strong>{{ symbol }}</strong>
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <span class="badge bg-{% if position.side == 'BUY' %}success{% else %}danger{% endif %}">
+                                                            {{ position.side }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <small>{{ "%.6f"|format(position.quantity) }}</small>
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <small>{{ "%.4f"|format(position.entry_price) }}</small>
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <small class="text-muted">{{ position.entry_time.strftime('%H:%M') }}</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Strategy Settings</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Min Confidence</span>
+                                    <span class="badge bg-secondary">90%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Stop Loss</span>
+                                    <span class="badge bg-danger">-1%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Take Profit</span>
+                                    <span class="badge bg-success">+2%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Max Position Size</span>
+                                    <span class="badge bg-info">5%</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No strategy status available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

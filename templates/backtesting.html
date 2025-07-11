@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}Backtesting - Binance Trading Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Backtest Configuration -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Backtest Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="backtestForm">
+                    <div class="mb-3">
+                        <label for="symbol" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="symbol" required>
+                            <option value="">Select a pair</option>
+                            {% for pair in trading_pairs %}
+                                <option value="{{ pair }}">{{ pair }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="startDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDate" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="endDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDate" required>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="text-muted mb-3">Strategy Parameters</h6>
+                    
+                    <div class="mb-3">
+                        <label for="minConfidence" class="form-label">Min Confidence</label>
+                        <input type="number" class="form-control" id="minConfidence" min="0.1" max="1" step="0.1" value="{{ default_strategy_params.min_confidence }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="stopLoss" class="form-label">Stop Loss (%)</label>
+                        <input type="number" class="form-control" id="stopLoss" min="0.01" max="0.1" step="0.01" value="{{ default_strategy_params.stop_loss }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="takeProfit" class="form-label">Take Profit (%)</label>
+                        <input type="number" class="form-control" id="takeProfit" min="0.01" max="0.2" step="0.01" value="{{ default_strategy_params.take_profit }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="positionSize" class="form-label">Position Size (%)</label>
+                        <input type="number" class="form-control" id="positionSize" min="0.01" max="0.5" step="0.01" value="{{ default_strategy_params.position_size }}">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-play me-2"></i>
+                            Run Backtest
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="runMultiBacktest()">
+                            <i class="fas fa-layer-group me-2"></i>
+                            Multi-Pair Backtest
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backtest Results -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Backtest Results
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="backtestResults" class="text-center text-muted">
+                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                    <p>Run a backtest to see results</p>
+                </div>
+                
+                <div id="loadingIndicator" class="text-center d-none">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Running backtest...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Chart -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area me-2"></i>
+                    Portfolio Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceChart" width="400" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trade History -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Backtest Trade History
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="tradeHistory">
+                    <p class="text-muted">No trades to display</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Pair Results Modal -->
+<div class="modal fade" id="multiBacktestModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Multi-Pair Backtest Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="multiBacktestResults">
+                    <!-- Results will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let performanceChart;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default dates
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        
+        document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+        
+        // Initialize chart
+        initializePerformanceChart();
+        
+        // Form submission
+        document.getElementById('backtestForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            runBacktest();
+        });
+    });
+
+    function initializePerformanceChart() {
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Portfolio Value',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Portfolio Value Over Time'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function runBacktest() {
+        const symbol = document.getElementById('symbol').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const minConfidence = parseFloat(document.getElementById('minConfidence').value);
+        const stopLoss = parseFloat(document.getElementById('stopLoss').value);
+        const takeProfit = parseFloat(document.getElementById('takeProfit').value);
+        const positionSize = parseFloat(document.getElementById('positionSize').value);
+        
+        if (!symbol || !startDate || !endDate) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        const backtestData = {
+            symbol: symbol,
+            start_date: startDate,
+            end_date: endDate,
+            strategy_params: {
+                min_confidence: minConfidence,
+                stop_loss: stopLoss,
+                take_profit: takeProfit,
+                position_size: positionSize
+            }
+        };
+        
+        // Show loading indicator
+        document.getElementById('backtestResults').classList.add('d-none');
+        document.getElementById('loadingIndicator').classList.remove('d-none');
+        
+        fetch('/api/backtest', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(backtestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingIndicator').classList.add('d-none');
+            document.getElementById('backtestResults').classList.remove('d-none');
+            
+            if (data.error) {
+                document.getElementById('backtestResults').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.error}
+                    </div>
+                `;
+            } else {
+                displayBacktestResults(data);
+            }
+        })
+        .catch(error => {
+            document.getElementById('loadingIndicator').classList.add('d-none');
+            document.getElementById('backtestResults').classList.remove('d-none');
+            document.getElementById('backtestResults').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error running backtest: ${error.message}
+                </div>
+            `;
+        });
+    }
+
+    function displayBacktestResults(data) {
+        const performance = data.performance;
+        const returnClass = performance.total_return >= 0 ? 'text-success' : 'text-danger';
+        const winRateClass = performance.win_rate >= 60 ? 'text-success' : 
+                           performance.win_rate >= 40 ? 'text-warning' : 'text-danger';
+        
+        const resultsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4 class="${returnClass}">${performance.total_return.toFixed(2)}%</h4>
+                            <p class="mb-0">Total Return</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4 class="${winRateClass}">${performance.win_rate.toFixed(1)}%</h4>
+                            <p class="mb-0">Win Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5>${performance.total_trades}</h5>
+                            <p class="text-muted mb-0">Total Trades</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="text-success">${performance.winning_trades}</h5>
+                            <p class="text-muted mb-0">Wins</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="text-danger">${performance.losing_trades}</h5>
+                            <p class="text-muted mb-0">Losses</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5>${performance.max_drawdown.toFixed(2)}%</h5>
+                            <p class="text-muted mb-0">Max Drawdown</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Initial Balance</h6>
+                            <h4>$${performance.initial_balance.toFixed(2)}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Final Balance</h6>
+                            <h4 class="${returnClass}">$${performance.final_balance.toFixed(2)}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('backtestResults').innerHTML = resultsHtml;
+        
+        // Update performance chart
+        updatePerformanceChart(data.portfolio_history);
+        
+        // Update trade history
+        updateTradeHistory(data.trades);
+    }
+
+    function updatePerformanceChart(portfolioHistory) {
+        const labels = portfolioHistory.map(h => new Date(h.timestamp).toLocaleDateString());
+        const values = portfolioHistory.map(h => h.total_value);
+        
+        performanceChart.data.labels = labels;
+        performanceChart.data.datasets[0].data = values;
+        performanceChart.update();
+    }
+
+    function updateTradeHistory(trades) {
+        const exitTrades = trades.filter(t => t.trade_type === 'EXIT');
+        
+        if (exitTrades.length === 0) {
+            document.getElementById('tradeHistory').innerHTML = '<p class="text-muted">No completed trades</p>';
+            return;
+        }
+        
+        let tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Quantity</th>
+                            <th>Entry Price</th>
+                            <th>Exit Price</th>
+                            <th>P&L</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        exitTrades.forEach(trade => {
+            const pnlClass = trade.pnl >= 0 ? 'text-success' : 'text-danger';
+            const date = new Date(trade.timestamp).toLocaleDateString();
+            
+            tableHtml += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${trade.symbol}</td>
+                    <td><span class="badge bg-${trade.side === 'BUY' ? 'success' : 'danger'}">${trade.side}</span></td>
+                    <td>${trade.quantity.toFixed(6)}</td>
+                    <td>${trade.entry_price.toFixed(4)}</td>
+                    <td>${trade.price.toFixed(4)}</td>
+                    <td class="${pnlClass}">${trade.pnl.toFixed(2)}</td>
+                    <td><small>${trade.exit_reason}</small></td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += '</tbody></table></div>';
+        document.getElementById('tradeHistory').innerHTML = tableHtml;
+    }
+
+    function runMultiBacktest() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const minConfidence = parseFloat(document.getElementById('minConfidence').value);
+        const stopLoss = parseFloat(document.getElementById('stopLoss').value);
+        const takeProfit = parseFloat(document.getElementById('takeProfit').value);
+        const positionSize = parseFloat(document.getElementById('positionSize').value);
+        
+        if (!startDate || !endDate) {
+            alert('Please set start and end dates');
+            return;
+        }
+        
+        const symbols = {{ trading_pairs | tojson }};
+        
+        const backtestData = {
+            symbols: symbols,
+            start_date: startDate,
+            end_date: endDate,
+            strategy_params: {
+                min_confidence: minConfidence,
+                stop_loss: stopLoss,
+                take_profit: takeProfit,
+                position_size: positionSize
+            }
+        };
+        
+        fetch('/api/backtest-multi', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(backtestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayMultiBacktestResults(data);
+            new bootstrap.Modal(document.getElementById('multiBacktestModal')).show();
+        })
+        .catch(error => {
+            alert('Error running multi-pair backtest: ' + error.message);
+        });
+    }
+
+    function displayMultiBacktestResults(data) {
+        let resultsHtml = '';
+        
+        if (data.combined) {
+            const combined = data.combined;
+            resultsHtml += `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Combined Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <h6>Total Return</h6>
+                                <h4 class="${combined.total_return >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${combined.total_return.toFixed(2)}%
+                                </h4>
+                            </div>
+                            <div class="col-md-3">
+                                <h6>Win Rate</h6>
+                                <h4>${combined.combined_win_rate.toFixed(1)}%</h4>
+                            </div>
+                            <div class="col-md-3">
+                                <h6>Total Trades</h6>
+                                <h4>${combined.total_trades}</h4>
+                            </div>
+                            <div class="col-md-3">
+                                <h6>Symbols</h6>
+                                <h4>${combined.symbols_tested.length}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        resultsHtml += '<div class="row">';
+        
+        Object.keys(data).forEach(symbol => {
+            if (symbol === 'combined') return;
+            
+            const result = data[symbol];
+            const perf = result.performance;
+            
+            resultsHtml += `
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6>${symbol}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <small class="text-muted">Return</small>
+                                    <h6 class="${perf.total_return >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${perf.total_return.toFixed(2)}%
+                                    </h6>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Win Rate</small>
+                                    <h6>${perf.win_rate.toFixed(1)}%</h6>
+                                </div>
+                            </div>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <small class="text-muted">Trades</small>
+                                    <h6>${perf.total_trades}</h6>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Drawdown</small>
+                                    <h6>${perf.max_drawdown.toFixed(2)}%</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsHtml += '</div>';
+        
+        document.getElementById('multiBacktestResults').innerHTML = resultsHtml;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,335 @@
+/* Custom CSS for Binance Trading Bot */
+/* Minimal custom styles to complement Bootstrap dark theme */
+
+/* Price change animations */
+.price-up {
+    animation: flash-green 1s ease-in-out;
+}
+
+.price-down {
+    animation: flash-red 1s ease-in-out;
+}
+
+@keyframes flash-green {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(25, 135, 84, 0.3); }
+}
+
+@keyframes flash-red {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(220, 53, 69, 0.3); }
+}
+
+/* Trading pair cards */
+.trading-pair-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.trading-pair-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Chart container */
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 1rem;
+}
+
+/* Loading spinner overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status-connected {
+    background-color: var(--bs-success);
+    animation: pulse 2s infinite;
+}
+
+.status-disconnected {
+    background-color: var(--bs-danger);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Portfolio cards */
+.portfolio-card {
+    border-left: 4px solid var(--bs-primary);
+}
+
+.portfolio-card.positive {
+    border-left-color: var(--bs-success);
+}
+
+.portfolio-card.negative {
+    border-left-color: var(--bs-danger);
+}
+
+/* Trade history table */
+.trade-history-table {
+    font-size: 0.9rem;
+}
+
+.trade-side-buy {
+    color: var(--bs-success);
+}
+
+.trade-side-sell {
+    color: var(--bs-danger);
+}
+
+/* Signal badges */
+.signal-strong {
+    background-color: var(--bs-success);
+}
+
+.signal-moderate {
+    background-color: var(--bs-warning);
+}
+
+.signal-weak {
+    background-color: var(--bs-secondary);
+}
+
+/* Confidence indicators */
+.confidence-bar {
+    height: 4px;
+    background-color: var(--bs-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--bs-danger), var(--bs-warning), var(--bs-success));
+    transition: width 0.3s ease;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+    
+    .trading-pair-card {
+        margin-bottom: 1rem;
+    }
+    
+    .trade-history-table {
+        font-size: 0.8rem;
+    }
+}
+
+/* Performance metrics */
+.metric-card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.metric-positive {
+    background: linear-gradient(135deg, var(--bs-success), rgba(25, 135, 84, 0.8));
+}
+
+.metric-negative {
+    background: linear-gradient(135deg, var(--bs-danger), rgba(220, 53, 69, 0.8));
+}
+
+/* Backtest results */
+.backtest-results {
+    background-color: var(--bs-dark);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.performance-chart {
+    background-color: var(--bs-body-bg);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+/* Settings form */
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+/* Navigation improvements */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.nav-link.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-light);
+}
+
+/* Alert improvements */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+/* Button improvements */
+.btn {
+    border-radius: 0.5rem;
+}
+
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+/* Modal improvements */
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* Card improvements */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Form improvements */
+.form-control, .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid var(--bs-border-color);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Progress bar improvements */
+.progress {
+    border-radius: 0.5rem;
+}
+
+.progress-bar {
+    border-radius: 0.5rem;
+}
+
+/* Badge improvements */
+.badge {
+    border-radius: 0.25rem;
+}
+
+/* Table improvements */
+.table {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--bs-border-color);
+}
+
+/* Utility classes */
+.text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.box-shadow {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.border-radius {
+    border-radius: 0.5rem;
+}
+
+/* Loading states */
+.skeleton {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background-size: 200px 100%;
+    background-repeat: no-repeat;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+}

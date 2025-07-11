@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Binance Trading Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- API Settings -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-key me-2"></i>
+                    API Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    API keys are stored in environment variables for security
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Connection Status</label>
+                    <div class="form-control-plaintext">
+                        <i class="fas fa-circle {% if is_connected %}text-success{% else %}text-danger{% endif %} me-2"></i>
+                        {% if is_connected %}Connected to Binance API{% else %}Not connected{% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="useTestnet" 
+                               {% if config.api_settings.use_testnet %}checked{% endif %}>
+                        <label class="form-check-label" for="useTestnet">
+                            Use Testnet (Paper Trading)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rateLimitBuffer" class="form-label">Rate Limit Buffer</label>
+                    <input type="number" class="form-control" id="rateLimitBuffer" 
+                           value="{{ config.api_settings.rate_limit_buffer }}" 
+                           min="0.1" max="1" step="0.1">
+                    <div class="form-text">Percentage of rate limits to use (0.1 = 10%, 1.0 = 100%)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Pairs -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exchange-alt me-2"></i>
+                    Trading Pairs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Current Pairs</label>
+                    <div id="currentPairs">
+                        {% for pair in config.trading_pairs %}
+                            <div class="badge bg-secondary me-2 mb-2">
+                                {{ pair }}
+                                <button type="button" class="btn-close btn-close-white ms-2" 
+                                        onclick="removePair('{{ pair }}')"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="newPair" class="form-label">Add New Pair</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newPair" 
+                               placeholder="e.g., BTCUSDT" style="text-transform: uppercase;">
+                        <button class="btn btn-outline-primary" type="button" onclick="addPair()">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Note:</strong> Only valid Binance trading pairs will be accepted
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Risk Management -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Risk Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="maxPositionSize" class="form-label">Max Position Size (%)</label>
+                    <input type="number" class="form-control" id="maxPositionSize" 
+                           value="{{ (config.risk_management.max_position_size * 100)|round(1) }}" 
+                           min="1" max="50" step="0.1">
+                    <div class="form-text">Maximum percentage of portfolio per trade</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="stopLossPercent" class="form-label">Stop Loss (%)</label>
+                    <input type="number" class="form-control" id="stopLossPercent" 
+                           value="{{ (config.risk_management.stop_loss_percent * 100)|round(1) }}" 
+                           min="0.1" max="10" step="0.1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="takeProfitPercent" class="form-label">Take Profit (%)</label>
+                    <input type="number" class="form-control" id="takeProfitPercent" 
+                           value="{{ (config.risk_management.take_profit_percent * 100)|round(1) }}" 
+                           min="0.1" max="20" step="0.1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="maxDailyLoss" class="form-label">Max Daily Loss (%)</label>
+                    <input type="number" class="form-control" id="maxDailyLoss" 
+                           value="{{ (config.risk_management.max_daily_loss * 100)|round(1) }}" 
+                           min="1" max="50" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="maxOpenTrades" class="form-label">Max Open Trades</label>
+                    <input type="number" class="form-control" id="maxOpenTrades" 
+                           value="{{ config.risk_management.max_open_trades }}" 
+                           min="1" max="20">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Strategy -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-robot me-2"></i>
+                    Trading Strategy
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="minConfidence" class="form-label">Minimum Confidence (%)</label>
+                    <input type="number" class="form-control" id="minConfidence" 
+                           value="{{ (config.trading_strategy.min_confidence * 100)|round(0) }}" 
+                           min="50" max="100" step="5">
+                    <div class="form-text">Minimum confidence required for trade execution</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rsiOversold" class="form-label">RSI Oversold Level</label>
+                    <input type="number" class="form-control" id="rsiOversold" 
+                           value="{{ config.trading_strategy.rsi_oversold }}" 
+                           min="10" max="40" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="rsiOverbought" class="form-label">RSI Overbought Level</label>
+                    <input type="number" class="form-control" id="rsiOverbought" 
+                           value="{{ config.trading_strategy.rsi_overbought }}" 
+                           min="60" max="90" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="bollingerPeriod" class="form-label">Bollinger Bands Period</label>
+                    <input type="number" class="form-control" id="bollingerPeriod" 
+                           value="{{ config.trading_strategy.bollinger_period }}" 
+                           min="10" max="50" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="bollingerStd" class="form-label">Bollinger Bands Standard Deviation</label>
+                    <input type="number" class="form-control" id="bollingerStd" 
+                           value="{{ config.trading_strategy.bollinger_std }}" 
+                           min="1" max="3" step="0.1">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Machine Learning -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-brain me-2"></i>
+                    Machine Learning
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="modelType" class="form-label">Model Type</label>
+                    <select class="form-select" id="modelType">
+                        <option value="LSTM" {% if config.ml_settings.model_type == 'LSTM' %}selected{% endif %}>LSTM</option>
+                        <option value="RandomForest" {% if config.ml_settings.model_type == 'RandomForest' %}selected{% endif %}>Random Forest</option>
+                        <option value="XGBoost" {% if config.ml_settings.model_type == 'XGBoost' %}selected{% endif %}>XGBoost</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="retrainInterval" class="form-label">Retrain Interval (hours)</label>
+                    <input type="number" class="form-control" id="retrainInterval" 
+                           value="{{ config.ml_settings.retrain_interval }}" 
+                           min="1" max="168" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="featureWindow" class="form-label">Feature Window (periods)</label>
+                    <input type="number" class="form-control" id="featureWindow" 
+                           value="{{ config.ml_settings.feature_window }}" 
+                           min="20" max="200" step="1">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="predictionHorizon" class="form-label">Prediction Horizon (minutes)</label>
+                    <input type="number" class="form-control" id="predictionHorizon" 
+                           value="{{ config.ml_settings.prediction_horizon }}" 
+                           min="5" max="120" step="5">
+                </div>
+                
+                <div class="mb-3">
+                    <button class="btn btn-primary" onclick="trainAllModels()">
+                        <i class="fas fa-play me-2"></i>
+                        Train All Models
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paper Trading -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Paper Trading
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="initialBalance" class="form-label">Initial Balance (USDT)</label>
+                    <input type="number" class="form-control" id="initialBalance" 
+                           value="{{ config.paper_trading.initial_balance }}" 
+                           min="100" max="1000000" step="100">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="baseCurrency" class="form-label">Base Currency</label>
+                    <select class="form-select" id="baseCurrency">
+                        <option value="USDT" {% if config.paper_trading.base_currency == 'USDT' %}selected{% endif %}>USDT</option>
+                        <option value="BUSD" {% if config.paper_trading.base_currency == 'BUSD' %}selected{% endif %}>BUSD</option>
+                        <option value="BTC" {% if config.paper_trading.base_currency == 'BTC' %}selected{% endif %}>BTC</option>
+                    </select>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> All trading is in paper mode. No real funds are used.
+                </div>
+                
+                <button class="btn btn-danger" onclick="resetPaperTrading()">
+                    <i class="fas fa-redo me-2"></i>
+                    Reset Paper Trading
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Settings -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <button class="btn btn-primary btn-lg" onclick="saveSettings()">
+                    <i class="fas fa-save me-2"></i>
+                    Save All Settings
+                </button>
+                <button class="btn btn-secondary btn-lg ms-2" onclick="resetSettings()">
+                    <i class="fas fa-undo me-2"></i>
+                    Reset to Defaults
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function addPair() {
+        const newPair = document.getElementById('newPair').value.trim().toUpperCase();
+        if (!newPair) {
+            alert('Please enter a trading pair');
+            return;
+        }
+        
+        fetch('/api/add-trading-pair', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ symbol: newPair })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error adding pair: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error adding pair: ' + error.message);
+        });
+    }
+
+    function removePair(pair) {
+        if (confirm(`Remove ${pair} from trading pairs?`)) {
+            fetch('/api/remove-trading-pair', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ symbol: pair })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error removing pair: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Error removing pair: ' + error.message);
+            });
+        }
+    }
+
+    function saveSettings() {
+        const settings = {
+            'api_settings.use_testnet': document.getElementById('useTestnet').checked,
+            'api_settings.rate_limit_buffer': parseFloat(document.getElementById('rateLimitBuffer').value),
+            'risk_management.max_position_size': parseFloat(document.getElementById('maxPositionSize').value) / 100,
+            'risk_management.stop_loss_percent': parseFloat(document.getElementById('stopLossPercent').value) / 100,
+            'risk_management.take_profit_percent': parseFloat(document.getElementById('takeProfitPercent').value) / 100,
+            'risk_management.max_daily_loss': parseFloat(document.getElementById('maxDailyLoss').value) / 100,
+            'risk_management.max_open_trades': parseInt(document.getElementById('maxOpenTrades').value),
+            'trading_strategy.min_confidence': parseFloat(document.getElementById('minConfidence').value) / 100,
+            'trading_strategy.rsi_oversold': parseInt(document.getElementById('rsiOversold').value),
+            'trading_strategy.rsi_overbought': parseInt(document.getElementById('rsiOverbought').value),
+            'trading_strategy.bollinger_period': parseInt(document.getElementById('bollingerPeriod').value),
+            'trading_strategy.bollinger_std': parseFloat(document.getElementById('bollingerStd').value),
+            'ml_settings.model_type': document.getElementById('modelType').value,
+            'ml_settings.retrain_interval': parseInt(document.getElementById('retrainInterval').value),
+            'ml_settings.feature_window': parseInt(document.getElementById('featureWindow').value),
+            'ml_settings.prediction_horizon': parseInt(document.getElementById('predictionHorizon').value),
+            'paper_trading.initial_balance': parseFloat(document.getElementById('initialBalance').value),
+            'paper_trading.base_currency': document.getElementById('baseCurrency').value
+        };
+        
+        fetch('/update-settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Settings saved successfully!');
+                location.reload();
+            } else {
+                alert('Error saving settings: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error saving settings: ' + error.message);
+        });
+    }
+
+    function resetSettings() {
+        if (confirm('Reset all settings to default values?')) {
+            location.reload();
+        }
+    }
+
+    function trainAllModels() {
+        const pairs = {{ config.trading_pairs | tojson }};
+        const totalPairs = pairs.length;
+        let completedTraining = 0;
+        
+        if (confirm(`Train ML models for all ${totalPairs} trading pairs? This may take several minutes.`)) {
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'alert alert-info';
+            progressDiv.innerHTML = `
+                <strong>Training Models...</strong>
+                <div class="progress mt-2">
+                    <div class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+                </div>
+            `;
+            document.body.appendChild(progressDiv);
+            
+            pairs.forEach(pair => {
+                fetch(`/train-model/${pair}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    completedTraining++;
+                    const percentage = (completedTraining / totalPairs) * 100;
+                    
+                    const progressBar = progressDiv.querySelector('.progress-bar');
+                    progressBar.style.width = percentage + '%';
+                    progressBar.textContent = Math.round(percentage) + '%';
+                    
+                    if (completedTraining === totalPairs) {
+                        progressDiv.className = 'alert alert-success';
+                        progressDiv.innerHTML = '<strong>Model training completed!</strong>';
+                        setTimeout(() => progressDiv.remove(), 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error training model for ${pair}:`, error);
+                    completedTraining++;
+                });
+            });
+        }
+    }
+
+    function resetPaperTrading() {
+        if (confirm('This will reset all paper trading data including portfolio and trade history. Are you sure?')) {
+            // This would need a backend endpoint to reset paper trading data
+            alert('Paper trading reset functionality would be implemented here');
+        }
+    }
+
+    // Auto-uppercase new pair input
+    document.getElementById('newPair').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+</script>
+{% endblock %}
