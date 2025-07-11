@@ -1,8 +1,17 @@
-# Binance Trading Bot
+# Advanced Binance Trading Bot
 
 ## Overview
 
-This is a sophisticated cryptocurrency trading bot built with Flask that provides paper trading simulation, technical analysis, machine learning predictions, and comprehensive backtesting capabilities. The bot is designed for intraday trading with multi-pair support and advanced risk management features.
+This is a sophisticated cryptocurrency trading bot built with Flask that provides **live trading capabilities** with real money, advanced technical analysis, machine learning predictions, and comprehensive risk management. The bot is designed for professional-grade trading with multi-pair support, advanced strategy engine, and real-time portfolio management.
+
+## Recent Changes (July 2025)
+
+- **✅ Upgraded to Live Trading**: Switched from paper trading to real money trading mode
+- **✅ Added Advanced Strategy Engine**: Multi-signal approach combining technical analysis, ML, and market regime detection
+- **✅ Implemented Live Trader Module**: Real order execution with proper risk management
+- **✅ Created Advanced Analysis**: Comprehensive market analysis with 85%+ confidence threshold
+- **✅ Added Proxy Support**: Network connectivity improvements for restricted regions
+- **✅ Enhanced Risk Management**: Dynamic position sizing, correlation monitoring, and drawdown protection
 
 ## User Preferences
 

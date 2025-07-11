@@ -36,10 +36,12 @@ db.init_app(app)
 # Import routes
 from routes.dashboard import dashboard_bp
 from routes.api_routes import api_bp
+from routes.live_trading import live_trading_bp
 
 # Register blueprints
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(api_bp, url_prefix='/api')
+app.register_blueprint(live_trading_bp, url_prefix='/live-trading')
 
 with app.app_context():
     # Import models to ensure tables are created

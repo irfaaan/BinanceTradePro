@@ -39,7 +39,7 @@
     "prediction_horizon": 30
   },
   "api_settings": {
-    "use_testnet": true,
+    "use_testnet": false,
     "rate_limit_buffer": 0.8
   }
 }

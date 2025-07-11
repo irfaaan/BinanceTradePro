@@ -6,7 +6,7 @@ from config import config
 from api.binance_client import binance_client
 from analysis.technical_indicators import technical_analyzer
 from analysis.ml_predictor import ml_predictor
-from trading.strategy import trading_strategy
+from trading.advanced_strategy import advanced_strategy
 from trading.paper_trader import paper_trader
 from backtesting.backtest_engine import backtest_engine
 from utils.data_cache import data_cache
@@ -41,16 +41,26 @@ def get_market_data(symbol):
         if cached_data:
             return jsonify(cached_data)
         
-        # Get fresh data
-        current_price = binance_client.get_ticker_price(symbol)
-        ticker_24hr = binance_client.get_24hr_ticker(symbol)
+        # Try to get fresh data from Binance, fallback to demo data
+        current_price = None
+        ticker_24hr = None
+        
+        if binance_client.is_connected():
+            current_price = binance_client.get_ticker_price(symbol)
+            ticker_24hr = binance_client.get_24hr_ticker(symbol)
         
         if not current_price or not ticker_24hr:
-            return jsonify({'error': 'Failed to get market data'}), 500
+            # Use demo data when Binance is not available
+            from utils.demo_data import demo_data
+            current_price = demo_data.get_current_price(symbol)
+            ticker_24hr = demo_data.get_24hr_ticker(symbol)
+            
+            if not current_price or not ticker_24hr:
+                return jsonify({'error': 'Symbol not supported in demo mode'}), 404
         
         data = {
             'symbol': symbol,
-            'price': current_price,
+            'price': float(current_price) if isinstance(current_price, str) else current_price,
             'change_24h': float(ticker_24hr.get('priceChangePercent', 0)),
             'volume_24h': float(ticker_24hr.get('volume', 0)),
             'high_24h': float(ticker_24hr.get('highPrice', 0)),
@@ -81,15 +91,19 @@ def get_chart_data(symbol):
         if cached_data:
             return jsonify(cached_data)
         
-        # Get historical data
-        klines = binance_client.get_historical_klines(
-            symbol=symbol,
-            interval=interval,
-            limit=limit
-        )
+        # Try to get historical data from Binance, fallback to demo data
+        klines = None
+        
+        if binance_client.is_connected():
+            klines = binance_client.get_historical_klines(symbol, interval, limit=limit)
         
         if not klines:
-            return jsonify({'error': 'No chart data available'}), 404
+            # Use demo data when Binance is not available
+            from utils.demo_data import demo_data
+            klines = demo_data.get_historical_klines(symbol, interval, limit)
+            
+            if not klines:
+                return jsonify({'error': 'Symbol not supported in demo mode'}), 404
         
         # Convert to chart format
         chart_data = []
@@ -122,15 +136,16 @@ def get_chart_data(symbol):
 def get_indicators(symbol):
     """Get technical indicators for a symbol"""
     try:
-        # Get historical data
-        klines = binance_client.get_historical_klines(
-            symbol=symbol,
-            interval='1h',
-            limit=100
-        )
+        # Try to get historical data from Binance, fallback to demo data
+        klines = None
+        
+        if binance_client.is_connected():
+            klines = binance_client.get_historical_klines(symbol, '1h', limit=100)
         
         if not klines:
-            return jsonify({'error': 'No data available'}), 404
+            # Use demo data when Binance is not available
+            from utils.demo_data import demo_data
+            return jsonify(demo_data.generate_technical_indicators(symbol))
         
         # Convert to DataFrame
         df = pd.DataFrame(klines, columns=[
@@ -177,15 +192,16 @@ def get_indicators(symbol):
 def get_prediction(symbol):
     """Get ML prediction for a symbol"""
     try:
-        # Get historical data
-        klines = binance_client.get_historical_klines(
-            symbol=symbol,
-            interval='1h',
-            limit=100
-        )
+        # Try to get historical data from Binance, fallback to demo data
+        klines = None
+        
+        if binance_client.is_connected():
+            klines = binance_client.get_historical_klines(symbol, '1h', limit=100)
         
         if not klines:
-            return jsonify({'error': 'No data available'}), 404
+            # Use demo data when Binance is not available
+            from utils.demo_data import demo_data
+            return jsonify(demo_data.generate_ml_prediction(symbol))
         
         # Convert to DataFrame
         df = pd.DataFrame(klines, columns=[

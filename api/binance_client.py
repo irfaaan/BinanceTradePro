@@ -7,6 +7,7 @@ from binance.exceptions import BinanceAPIException
 from binance.enums import *
 from datetime import datetime, timedelta
 from config import config
+from api.proxy_client import proxy_binance_client
 
 logger = logging.getLogger(__name__)
 
@@ -16,17 +17,26 @@ class BinanceClient:
         self.secret_key = config.binance_secret_key
         self.testnet = config.use_testnet
         
+        # Use proxy client for better connectivity
+        self.proxy_client = proxy_binance_client
+        
         if not self.api_key or not self.secret_key:
             logger.warning("Binance API credentials not found. Using demo mode.")
             self.client = None
         else:
             try:
-                self.client = Client(
-                    self.api_key, 
-                    self.secret_key, 
-                    testnet=self.testnet
-                )
-                logger.info(f"Binance client initialized (testnet: {self.testnet})")
+                # Use proxy client if available
+                if self.proxy_client.is_connected():
+                    self.client = self.proxy_client.client
+                    logger.info("Using proxy client for Binance API")
+                else:
+                    # Fallback to direct connection
+                    self.client = Client(
+                        self.api_key, 
+                        self.secret_key, 
+                        testnet=self.testnet
+                    )
+                    logger.info(f"Binance client initialized (testnet: {self.testnet})")
             except Exception as e:
                 logger.error(f"Failed to initialize Binance client: {e}")
                 self.client = None
@@ -34,12 +44,14 @@ class BinanceClient:
     def is_connected(self) -> bool:
         """Check if client is properly connected"""
         if not self.client:
-            return False
+            # Try proxy client
+            return self.proxy_client.is_connected()
         try:
             self.client.ping()
             return True
         except:
-            return False
+            # Fallback to proxy client
+            return self.proxy_client.is_connected()
     
     def get_account_info(self) -> Optional[Dict]:
         """Get account information"""

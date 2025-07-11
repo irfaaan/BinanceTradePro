@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Features - Binance Trading Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-rocket me-2"></i>
+                    Advanced Trading Bot Features
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Live Trading Mode Active:</strong> This bot is now configured for real money trading with your Binance account.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-chart-line me-2"></i>Technical Analysis</h5>
+                        <ul>
+                            <li>15+ Technical Indicators (RSI, MACD, Bollinger Bands, etc.)</li>
+                            <li>Dynamic Support/Resistance Levels</li>
+                            <li>Chart Pattern Recognition</li>
+                            <li>Volume Profile Analysis</li>
+                            <li>Momentum Divergence Detection</li>
+                            <li>Trend Strength Calculation</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-brain me-2"></i>Machine Learning</h5>
+                        <ul>
+                            <li>Random Forest Price Prediction</li>
+                            <li>Ensemble Model Confidence</li>
+                            <li>Volatility Forecasting</li>
+                            <li>Trend Continuation Probability</li>
+                            <li>Reversal Detection</li>
+                            <li>Feature Engineering (60+ features)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-shield-alt me-2"></i>Risk Management</h5>
+                        <ul>
+                            <li>Dynamic Position Sizing</li>
+                            <li>Stop-Loss/Take-Profit Orders</li>
+                            <li>Portfolio Correlation Analysis</li>
+                            <li>Maximum Drawdown Protection</li>
+                            <li>Daily Loss Limits</li>
+                            <li>Volatility-Based Risk Adjustment</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-globe me-2"></i>Market Analysis</h5>
+                        <ul>
+                            <li>Market Regime Detection</li>
+                            <li>Multi-Timeframe Analysis</li>
+                            <li>Liquidity Assessment</li>
+                            <li>Market Impact Calculation</li>
+                            <li>Correlation Risk Monitoring</li>
+                            <li>Real-Time Data Processing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-cogs me-2"></i>Trading Features</h5>
+                        <ul>
+                            <li>Live Order Execution</li>
+                            <li>Market & Limit Orders</li>
+                            <li>OCO (One-Cancels-Other) Orders</li>
+                            <li>Trailing Stop Orders</li>
+                            <li>Multi-Symbol Trading</li>
+                            <li>Real-Time Balance Tracking</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Performance Tracking</h5>
+                        <ul>
+                            <li>Real-Time P&L Calculation</li>
+                            <li>Win/Loss Rate Analysis</li>
+                            <li>Sharpe Ratio Calculation</li>
+                            <li>Maximum Drawdown Tracking</li>
+                            <li>Trade Performance Metrics</li>
+                            <li>Portfolio Value Monitoring</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-robot me-2"></i>
+                    Advanced Strategy Engine
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Multi-Signal Approach</h6>
+                <p>The bot combines multiple analysis methods to make trading decisions:</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h5>Technical Analysis</h5>
+                                <p class="mb-0">40% Weight</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h5>ML Prediction</h5>
+                                <p class="mb-0">50% Weight</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h5>Market Regime</h5>
+                                <p class="mb-0">10% Weight</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mt-4">Signal Confidence Levels</h6>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-danger" style="width: 20%">High Risk</div>
+                    <div class="progress-bar bg-warning" style="width: 30%">Medium Risk</div>
+                    <div class="progress-bar bg-success" style="width: 50%">Low Risk</div>
+                </div>
+                <p><small>Only trades with 85%+ confidence are executed in live mode</small></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Important Notes
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Risk Warning</h6>
+                    <p>This bot trades with real money. Cryptocurrency trading involves significant risk and you could lose your entire investment.</p>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-globe me-2"></i>Network Access</h6>
+                    <p>If you're experiencing connection issues, the bot includes proxy support. Consider using a VPN for better Binance API access.</p>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-key me-2"></i>API Security</h6>
+                    <p>Your API keys are stored securely in Replit Secrets. The bot only has spot trading permissions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    How to Use the Advanced Features
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>1. Monitor the Dashboard</h6>
+                        <p>Keep an eye on the main dashboard for real-time market data and portfolio performance.</p>
+                        
+                        <h6>2. Use Live Trading Panel</h6>
+                        <p>Execute manual trades or let the advanced strategy make automated decisions based on market analysis.</p>
+                        
+                        <h6>3. Set Risk Management</h6>
+                        <p>Configure your stop-loss and take-profit levels for each position to protect your capital.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>4. Review Performance</h6>
+                        <p>Regularly check your trading performance metrics and adjust strategy parameters as needed.</p>
+                        
+                        <h6>5. Use Advanced Analysis</h6>
+                        <p>Leverage the comprehensive market analysis to identify the best trading opportunities.</p>
+                        
+                        <h6>6. Monitor Risk Metrics</h6>
+                        <p>Keep track of your portfolio risk levels and correlation exposure to maintain balanced trading.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

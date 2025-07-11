@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+
+{% block title %}Live Trading - Advanced Binance Bot{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Connection Status -->
+    <div class="col-12 mb-4">
+        <div class="alert {% if is_connected %}alert-success{% else %}alert-danger{% endif %}">
+            <i class="fas fa-{% if is_connected %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+            <strong>Connection Status:</strong> 
+            {% if is_connected %}
+                Connected to Binance API - Live Trading Active
+            {% else %}
+                Disconnected from Binance API - Trading Disabled
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Account Summary -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-wallet me-2"></i>
+                    Account Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if portfolio_summary %}
+                    <div class="row">
+                        <div class="col-6">
+                            <h6 class="text-muted">Total Value</h6>
+                            <h4 class="text-primary">{{ "%.2f"|format(portfolio_summary.total_value) }} USDT</h4>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-muted">Base Currency</h6>
+                            <h4 class="text-info">{{ portfolio_summary.base_currency }}</h4>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="text-muted mb-3">Live Balances</h6>
+                    {% for asset, balance in balances.items() %}
+                        {% if balance.total > 0 %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>{{ asset }}</strong></span>
+                                <span class="text-end">
+                                    <div>Free: {{ "%.6f"|format(balance.free) }}</div>
+                                    <div>Locked: {{ "%.6f"|format(balance.locked) }}</div>
+                                    <small class="text-muted">Total: {{ "%.6f"|format(balance.total) }}</small>
+                                </span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Unable to fetch account data. Check API connection.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Trade Panel -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Trade
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="quickTradeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Trading Pair</label>
+                        <select class="form-select" id="tradingPair" required>
+                            <option value="">Select a pair...</option>
+                            {% for pair in trading_pairs %}
+                                <option value="{{ pair }}">{{ pair }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label">Action</label>
+                            <select class="form-select" id="tradeAction" required>
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Order Type</label>
+                            <select class="form-select" id="orderType">
+                                <option value="MARKET">Market</option>
+                                <option value="LIMIT">Limit</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="tradeQuantity" step="0.000001" required>
+                    </div>
+                    
+                    <div class="mb-3" id="priceField" style="display: none;">
+                        <label class="form-label">Price</label>
+                        <input type="number" class="form-control" id="tradePrice" step="0.00000001">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Execute Trade
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Advanced Analysis -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-brain me-2"></i>
+                    Advanced Market Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Symbol for Analysis</label>
+                    <select class="form-select" id="analysisSymbol">
+                        <option value="">Select a symbol...</option>
+                        {% for pair in trading_pairs %}
+                            <option value="{{ pair }}">{{ pair }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div id="analysisResults" class="d-none">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Trading Signal</h6>
+                            <div id="tradingSignal" class="mb-3"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Confidence Score</h6>
+                            <div id="confidenceScore" class="mb-3"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Market Regime</h6>
+                            <div id="marketRegime" class="mb-3"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Risk Level</h6>
+                            <div id="riskLevel" class="mb-3"></div>
+                        </div>
+                    </div>
+                    
+                    <button id="executeAdvancedTrade" class="btn btn-success">
+                        <i class="fas fa-robot me-2"></i>
+                        Execute Advanced Trade
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Metrics -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Risk Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="riskMetrics">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading risk metrics...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Positions -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Active Positions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if active_positions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Quantity</th>
+                                    <th>Entry Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for symbol, position in active_positions.items() %}
+                                    <tr>
+                                        <td><strong>{{ symbol }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-{% if position.side == 'BUY' %}success{% else %}danger{% endif %}">
+                                                {{ position.side }}
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.6f"|format(position.quantity) }}</td>
+                                        <td>{{ "%.8f"|format(position.entry_price) }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="setStopLoss('{{ symbol }}')">
+                                                <i class="fas fa-stop-circle"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" onclick="setTakeProfit('{{ symbol }}')">
+                                                <i class="fas fa-target"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No active positions</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Trades -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Recent Live Trades
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_trades %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trade in recent_trades %}
+                                    <tr>
+                                        <td>
+                                            <small>{{ trade.created_at[:16] }}</small>
+                                        </td>
+                                        <td><strong>{{ trade.symbol }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-{% if trade.side == 'BUY' %}success{% else %}danger{% endif %}">
+                                                {{ trade.side }}
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.6f"|format(trade.quantity) }}</td>
+                                        <td>{{ "%.8f"|format(trade.price) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-chart-line fa-2x mb-2"></i>
+                        <p>No recent trades</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stop Loss Modal -->
+<div class="modal fade" id="stopLossModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Stop Loss</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stopLossForm">
+                    <input type="hidden" id="slSymbol">
+                    <div class="mb-3">
+                        <label class="form-label">Stop Price</label>
+                        <input type="number" class="form-control" id="stopPrice" step="0.00000001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="slQuantity" step="0.000001" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="executeStopLoss()">Set Stop Loss</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Take Profit Modal -->
+<div class="modal fade" id="takeProfitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Take Profit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="takeProfitForm">
+                    <input type="hidden" id="tpSymbol">
+                    <div class="mb-3">
+                        <label class="form-label">Target Price</label>
+                        <input type="number" class="form-control" id="targetPrice" step="0.00000001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="tpQuantity" step="0.000001" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="executeTakeProfit()">Set Take Profit</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live trading functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Load risk metrics
+    loadRiskMetrics();
+    
+    // Set up form handlers
+    setupTradeForm();
+    setupAnalysisForm();
+    
+    // Auto-refresh data every 30 seconds
+    setInterval(function() {
+        loadRiskMetrics();
+    }, 30000);
+});
+
+function setupTradeForm() {
+    const form = document.getElementById('quickTradeForm');
+    const orderType = document.getElementById('orderType');
+    const priceField = document.getElementById('priceField');
+    
+    // Show/hide price field based on order type
+    orderType.addEventListener('change', function() {
+        if (this.value === 'LIMIT') {
+            priceField.style.display = 'block';
+            document.getElementById('tradePrice').required = true;
+        } else {
+            priceField.style.display = 'none';
+            document.getElementById('tradePrice').required = false;
+        }
+    });
+    
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        executeTrade();
+    });
+}
+
+function setupAnalysisForm() {
+    const analysisSymbol = document.getElementById('analysisSymbol');
+    
+    analysisSymbol.addEventListener('change', function() {
+        if (this.value) {
+            loadAdvancedAnalysis(this.value);
+        }
+    });
+    
+    // Set up advanced trade execution
+    document.getElementById('executeAdvancedTrade').addEventListener('click', function() {
+        const symbol = document.getElementById('analysisSymbol').value;
+        if (symbol) {
+            executeAdvancedTrade(symbol);
+        }
+    });
+}
+
+function executeTrade() {
+    const formData = {
+        symbol: document.getElementById('tradingPair').value,
+        action: document.getElementById('tradeAction').value,
+        quantity: parseFloat(document.getElementById('tradeQuantity').value),
+        order_type: document.getElementById('orderType').value,
+        price: document.getElementById('tradePrice').value ? parseFloat(document.getElementById('tradePrice').value) : null
+    };
+    
+    fetch('/live-trading/api/live-trade', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            // Clear form
+            document.getElementById('quickTradeForm').reset();
+            // Refresh page after 2 seconds
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert('danger', data.error || 'Trade execution failed');
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Network error: ' + error.message);
+    });
+}
+
+function loadAdvancedAnalysis(symbol) {
+    fetch(`/live-trading/api/advanced-analysis/${symbol}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showAlert('warning', data.error);
+            return;
+        }
+        
+        displayAnalysisResults(data);
+    })
+    .catch(error => {
+        showAlert('danger', 'Error loading analysis: ' + error.message);
+    });
+}
+
+function displayAnalysisResults(analysis) {
+    const resultsDiv = document.getElementById('analysisResults');
+    resultsDiv.classList.remove('d-none');
+    
+    // Trading Signal
+    const signal = analysis.trading_signal;
+    const signalHtml = `
+        <div class="badge bg-${signal.action === 'BUY' ? 'success' : signal.action === 'SELL' ? 'danger' : 'secondary'} fs-6">
+            ${signal.action}
+        </div>
+        <div class="mt-1">
+            <small>Strength: ${(signal.signal_strength * 100).toFixed(1)}%</small>
+        </div>
+    `;
+    document.getElementById('tradingSignal').innerHTML = signalHtml;
+    
+    // Confidence Score
+    const confidence = analysis.confidence_score;
+    const confidenceHtml = `
+        <div class="progress">
+            <div class="progress-bar bg-${confidence > 0.7 ? 'success' : confidence > 0.4 ? 'warning' : 'danger'}" 
+                 style="width: ${confidence * 100}%">
+                ${(confidence * 100).toFixed(1)}%
+            </div>
+        </div>
+    `;
+    document.getElementById('confidenceScore').innerHTML = confidenceHtml;
+    
+    // Market Regime
+    const regime = analysis.market_regime;
+    document.getElementById('marketRegime').innerHTML = `
+        <span class="badge bg-info">${regime.regime}</span>
+        <div class="mt-1">
+            <small>Confidence: ${(regime.confidence * 100).toFixed(1)}%</small>
+        </div>
+    `;
+    
+    // Risk Level
+    const risk = analysis.risk_assessment;
+    document.getElementById('riskLevel').innerHTML = `
+        <span class="badge bg-${risk.risk_level === 'HIGH' ? 'danger' : risk.risk_level === 'MEDIUM' ? 'warning' : 'success'}">
+            ${risk.risk_level}
+        </span>
+        <div class="mt-1">
+            <small>Score: ${(risk.overall_risk_score * 100).toFixed(1)}%</small>
+        </div>
+    `;
+}
+
+function executeAdvancedTrade(symbol) {
+    fetch('/live-trading/api/execute-advanced-trade', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({symbol: symbol})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showAlert('info', data.message);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Error executing advanced trade: ' + error.message);
+    });
+}
+
+function loadRiskMetrics() {
+    fetch('/live-trading/api/risk-metrics')
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('riskMetrics').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.error}
+                </div>
+            `;
+            return;
+        }
+        
+        const riskHtml = `
+            <div class="row">
+                <div class="col-6">
+                    <h6 class="text-muted">Risk Level</h6>
+                    <span class="badge bg-${data.risk_level === 'HIGH' ? 'danger' : data.risk_level === 'MEDIUM' ? 'warning' : 'success'} fs-6">
+                        ${data.risk_level}
+                    </span>
+                </div>
+                <div class="col-6">
+                    <h6 class="text-muted">Position Concentration</h6>
+                    <div class="progress">
+                        <div class="progress-bar bg-${data.position_concentration > 0.5 ? 'danger' : data.position_concentration > 0.3 ? 'warning' : 'success'}" 
+                             style="width: ${data.position_concentration * 100}%">
+                            ${(data.position_concentration * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-6">
+                    <small class="text-muted">Max Drawdown</small>
+                    <div>${(data.max_drawdown * 100).toFixed(2)}%</div>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted">Leverage</small>
+                    <div>${data.leverage_ratio.toFixed(2)}x</div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('riskMetrics').innerHTML = riskHtml;
+    })
+    .catch(error => {
+        document.getElementById('riskMetrics').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading risk metrics
+            </div>
+        `;
+    });
+}
+
+function setStopLoss(symbol) {
+    document.getElementById('slSymbol').value = symbol;
+    new bootstrap.Modal(document.getElementById('stopLossModal')).show();
+}
+
+function setTakeProfit(symbol) {
+    document.getElementById('tpSymbol').value = symbol;
+    new bootstrap.Modal(document.getElementById('takeProfitModal')).show();
+}
+
+function executeStopLoss() {
+    const data = {
+        symbol: document.getElementById('slSymbol').value,
+        quantity: parseFloat(document.getElementById('slQuantity').value),
+        stop_price: parseFloat(document.getElementById('stopPrice').value)
+    };
+    
+    fetch('/live-trading/api/set-stop-loss', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('stopLossModal')).hide();
+        } else {
+            showAlert('danger', data.error);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Error setting stop loss: ' + error.message);
+    });
+}
+
+function executeTakeProfit() {
+    const data = {
+        symbol: document.getElementById('tpSymbol').value,
+        quantity: parseFloat(document.getElementById('tpQuantity').value),
+        target_price: parseFloat(document.getElementById('targetPrice').value)
+    };
+    
+    fetch('/live-trading/api/set-take-profit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('takeProfitModal')).hide();
+        } else {
+            showAlert('danger', data.error);
+        }
+    })
+    .catch(error => {
+        showAlert('danger', 'Error setting take profit: ' + error.message);
+    });
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

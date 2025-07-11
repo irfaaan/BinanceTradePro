@@ -13,7 +13,7 @@ class PaperTrader:
         self.initial_balance = config.get('paper_trading.initial_balance', 10000.0)
         self.base_currency = config.get('paper_trading.base_currency', 'USDT')
         self.active_trades = {}
-        self.initialize_portfolio()
+        # Don't initialize portfolio in __init__ to avoid app context issues
     
     def initialize_portfolio(self):
         """Initialize paper trading portfolio"""
@@ -36,9 +36,19 @@ class PaperTrader:
         except Exception as e:
             logger.error(f"Error initializing portfolio: {e}")
     
+    def ensure_portfolio_initialized(self):
+        """Ensure portfolio is initialized (call this before using portfolio methods)"""
+        try:
+            base_portfolio = Portfolio.query.filter_by(asset=self.base_currency).first()
+            if not base_portfolio:
+                self.initialize_portfolio()
+        except Exception as e:
+            logger.error(f"Error ensuring portfolio initialization: {e}")
+    
     def get_portfolio_balance(self, asset: str) -> float:
         """Get available balance for an asset"""
         try:
+            self.ensure_portfolio_initialized()
             portfolio = Portfolio.query.filter_by(asset=asset).first()
             return portfolio.balance if portfolio else 0.0
         except Exception as e:
@@ -272,38 +282,6 @@ class PaperTrader:
             logger.error(f"Error getting trade history: {e}")
             return []
     
-    def get_portfolio_summary(self) -> Dict:
-        """Get portfolio summary"""
-        try:
-            portfolios = Portfolio.query.all()
-            summary = {
-                'assets': {},
-                'total_value': 0.0,
-                'initial_balance': self.initial_balance,
-                'pnl': 0.0,
-                'pnl_percent': 0.0
-            }
-            
-            for portfolio in portfolios:
-                summary['assets'][portfolio.asset] = {
-                    'balance': portfolio.balance,
-                    'locked_balance': portfolio.locked_balance,
-                    'avg_price': portfolio.avg_price,
-                    'updated_at': portfolio.updated_at
-                }
-            
-            # Calculate total value (simplified - assumes base currency)
-            base_balance = summary['assets'].get(self.base_currency, {}).get('balance', 0.0)
-            summary['total_value'] = base_balance
-            summary['pnl'] = base_balance - self.initial_balance
-            summary['pnl_percent'] = (summary['pnl'] / self.initial_balance) * 100
-            
-            return summary
-            
-        except Exception as e:
-            logger.error(f"Error getting portfolio summary: {e}")
-            return {}
-    
     def calculate_performance_metrics(self) -> Dict:
         """Calculate performance metrics"""
         try:
@@ -354,6 +332,47 @@ class PaperTrader:
         except Exception as e:
             logger.error(f"Error calculating performance metrics: {e}")
             return {}
+    
+    def get_portfolio_summary(self) -> Dict:
+        """Get portfolio summary"""
+        try:
+            self.ensure_portfolio_initialized()
+            
+            portfolios = Portfolio.query.all()
+            summary = {
+                'assets': {},
+                'total_value': 0.0,
+                'initial_balance': self.initial_balance,
+                'pnl': 0.0,
+                'pnl_percent': 0.0
+            }
+            
+            for portfolio in portfolios:
+                summary['assets'][portfolio.asset] = {
+                    'balance': portfolio.balance,
+                    'locked_balance': portfolio.locked_balance,
+                    'avg_price': portfolio.avg_price,
+                    'updated_at': portfolio.updated_at.isoformat() if portfolio.updated_at else None
+                }
+            
+            # Calculate total value (simplified - assumes base currency)
+            base_balance = summary['assets'].get(self.base_currency, {}).get('balance', 0.0)
+            summary['total_value'] = base_balance
+            summary['pnl'] = base_balance - self.initial_balance
+            summary['pnl_percent'] = (summary['pnl'] / self.initial_balance) * 100 if self.initial_balance > 0 else 0
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error getting portfolio summary: {e}")
+            return {
+                'total_value': 0,
+                'base_currency': self.base_currency,
+                'assets': {},
+                'initial_balance': self.initial_balance,
+                'pnl': 0,
+                'pnl_percent': 0
+            }
 
 # Global paper trader instance
 paper_trader = PaperTrader()

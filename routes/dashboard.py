@@ -6,7 +6,7 @@ from config import config
 from api.binance_client import binance_client
 from analysis.technical_indicators import technical_analyzer
 from analysis.ml_predictor import ml_predictor
-from trading.strategy import trading_strategy
+from trading.advanced_strategy import advanced_strategy
 from trading.paper_trader import paper_trader
 from models import TradingPair, Trade, Portfolio, db
 
@@ -20,6 +20,9 @@ def index():
     try:
         # Get trading pairs
         trading_pairs = config.trading_pairs
+        
+        # Ensure portfolio is initialized
+        paper_trader.ensure_portfolio_initialized()
         
         # Get portfolio summary
         portfolio_summary = paper_trader.get_portfolio_summary()

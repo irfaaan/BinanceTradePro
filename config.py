@@ -54,7 +54,7 @@ class Config:
                 "prediction_horizon": 30  # minutes
             },
             "api_settings": {
-                "use_testnet": True,
+                "use_testnet": False,
                 "rate_limit_buffer": 0.8  # Use 80% of rate limits
             }
         }
